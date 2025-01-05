@@ -15,6 +15,7 @@ spec:
       containers:
         - name: connection-group-app
           image: connection-group-app:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
           env:
