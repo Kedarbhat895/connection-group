@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connection-group-app
+spec:
+  replicas: 1  # The number of instances of your app
+  selector:
+    matchLabels:
+      app: connection-group-app
+  template:
+    metadata:
+      labels:
+        app: connection-group-app
+    spec:
+      containers:
+        - name: connection-group-app
+          image: connection-group-app:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name:  AWS_DB_ENDPOINT
+              value: "http://localhost:8000"
+            - name: AWS_ACCESS_KEY_ID
+              value: "local"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "local"
+            - name: AWS_REGION
+              value: "ap-south-1"
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"

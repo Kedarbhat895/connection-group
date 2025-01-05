@@ -1,8 +1,12 @@
 package com.example.connection_group.service;
 
+import com.example.connection_group.dao.AuditDao;
 import com.example.connection_group.models.ConnectionGroup;
-import com.example.connection_group.models.VirtualNode;
 import com.example.connection_group.models.CreateConnectionGroupRequest;
+import com.example.connection_group.models.VirtualNode;
+import com.example.connection_group.models.entity.ConnectionGroupAuditLog;
+import com.example.connection_group.models.entity.ConnectionGroupAuditLog.GroupDetails;
+import com.example.connection_group.models.entity.EventType;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -11,10 +15,17 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import org.joda.time.DateTime;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ConnectionGroupServiceImpl implements ConnectionGroupService {
+
+  private final ConcurrentMap<String, ConnectionGroup> connectionGroupMap;
+  private final ConcurrentMap<String, VirtualNode> virtualNodeMap;
 
   public ConcurrentMap<String, ConnectionGroup> getConnectionGroupMap() {
     return connectionGroupMap;
@@ -24,14 +35,16 @@ public class ConnectionGroupServiceImpl implements ConnectionGroupService {
     return virtualNodeMap;
   }
 
-  private final ConcurrentMap<String, ConnectionGroup> connectionGroupMap;
-  private final ConcurrentMap<String, VirtualNode> virtualNodeMap;
+  private final AuditDao auditDao;
 
-  public ConnectionGroupServiceImpl() {
+  public ConnectionGroupServiceImpl(@Autowired
+  AuditDao auditDao) {
     this.connectionGroupMap = new ConcurrentHashMap<>();
     this.virtualNodeMap = new ConcurrentHashMap<>();
+    this.auditDao = auditDao;
   }
 
+  @Transactional(isolation = Isolation.READ_COMMITTED)
   public String createConnectionGroup(CreateConnectionGroupRequest nodeRequest) {
     if (connectionGroupMap.containsKey(nodeRequest.getConnectionGroupName())) {
       throw new IllegalArgumentException(
@@ -77,6 +90,7 @@ public class ConnectionGroupServiceImpl implements ConnectionGroupService {
 
     connectionGroup.setVNodes(vNodes);
     connectionGroupMap.put(connectionGroup.getName(), connectionGroup);
+    storeAudit(nodeRequest, EventType.CREATE_GROUP);
     return "Created Successfully";
   }
 
@@ -89,7 +103,7 @@ public class ConnectionGroupServiceImpl implements ConnectionGroupService {
   }
 
 
-  public String deleteNode(String nodeName) {
+  public String deleteNode(String nodeName, String userName) {
     if (!virtualNodeMap.containsKey(nodeName)) {
       throw new IllegalArgumentException("Node does not exist");
     }
@@ -105,6 +119,9 @@ public class ConnectionGroupServiceImpl implements ConnectionGroupService {
         virtualNodeMap.remove(vNode.getName());
       }
       connectionGroupMap.remove(connectionGroupName);
+      CreateConnectionGroupRequest request = new CreateConnectionGroupRequest(connectionGroupName,
+          Set.of(nodeName), userName);
+      storeAudit(request, EventType.DELETE_NODE);
       return "Root node deleted: Connection group and all its nodes removed successfully.";
     }
 
@@ -126,6 +143,9 @@ public class ConnectionGroupServiceImpl implements ConnectionGroupService {
     // Remove the node
     connectionGroup.getvNodes().remove(node);
     virtualNodeMap.remove(nodeName);
+    CreateConnectionGroupRequest request = new CreateConnectionGroupRequest(connectionGroupName,
+        Set.of(nodeName), userName);
+    storeAudit(request, EventType.DELETE_NODE);
     return "Node deleted successfully.";
   }
 
@@ -170,6 +190,13 @@ public class ConnectionGroupServiceImpl implements ConnectionGroupService {
       parentMap.put(child, parent);
     }
     return parentMap;
+  }
+
+  private void storeAudit(CreateConnectionGroupRequest request, EventType type) {
+    GroupDetails details = new GroupDetails(request.getConnectionGroupName(), request.getNodes());
+    ConnectionGroupAuditLog log = new ConnectionGroupAuditLog(request.getConnectionGroupName(),
+        type, DateTime.now(), details, request.getUserName());
+    auditDao.saveAudit(log);
   }
 
 }

@@ -12,6 +12,26 @@ public class CreateConnectionGroupRequest {
   private Set<String> nodes;
   private List<List<String>> connectedComponents;
 
+  private String userName;
+
+  public String getUserName() {
+    return userName;
+  }
+
+  public CreateConnectionGroupRequest(String connectionGroupName, Set<String> nodes,
+      String userName) {
+    this.connectionGroupName = connectionGroupName;
+    this.nodes = nodes;
+    this.userName = userName;
+  }
+
+  public void setUserName(String userName) {
+    this.userName = userName;
+  }
+
+  public CreateConnectionGroupRequest() {
+  }
+
   public void setConnectionGroupName(String connectionGroupName) {
     this.connectionGroupName = connectionGroupName;
   }

@@ -1,0 +1,12 @@
+services:
+  connection-group-app:
+    build:
+      context: .
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=ap-south-1
+      - AWS_DB_ENDPOINT=https://dynamodb.ap-south-1.amazonaws.com

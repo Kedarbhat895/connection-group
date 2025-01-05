@@ -6,7 +6,7 @@ public interface ConnectionGroupService {
 
   String createConnectionGroup(CreateConnectionGroupRequest request);
 
-  String deleteNode(String nodeName);
+  String deleteNode(String nodeName, String userName);
 
   String getConnectionGroup(String nodeName);
 }
